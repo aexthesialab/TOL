@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <title>ÆX . Tower of London</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    body {
+      background: #0d0d0d;
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      padding: 24px 16px 60px;
+      text-align: center;
+      margin: 0;
+    }
+
+    h1 {
+      font-size: 40px;
+      margin-bottom: 12px;
+    }
+
+    h2 {
+      font-size: 26px;
+      margin-top: 32px;
+      margin-bottom: 12px;
+    }
+
+    h3 {
+      font-size: 20px;
+      margin-top: 16px;
+      margin-bottom: 8px;
+    }
+
+    #status {
+      font-size: 16px;
+      margin-bottom: 20px;
+    }
+
+    #boards-wrapper {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    #boards {
+      display: flex;
+      justify-content: space-around;
+      gap: 32px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+
+    .board-block {
+      flex: 1 1 280px;
+    }
+
+    .board-title {
+      margin-bottom: 8px;
+      font-size: 18px;
+    }
+
+    .board {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+    }
+
+    .peg {
+      width: 72px;
+      height: 220px;
+      border: 3px solid #54ffd0;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column-reverse;
+      justify-content: flex-start;
+      align-items: center;
+      padding: 10px;
+      cursor: pointer;
+      background: #151515;
+      box-sizing: border-box;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+    }
+
+    .peg.selected {
+      border-color: #ffd600;
+      box-shadow: 0 0 10px #ffd600;
+      transform: translateY(-2px);
+    }
+
+    .ball {
+      width: 52px;
+      height: 52px;
+      margin: 5px 0;
+      border-radius: 50%;
+    }
+
+    .ball-red { background: #ff4d4d; }
+    .ball-green { background: #5aff5a; }
+    .ball-blue { background: #5ac8ff; }
+
+    .btn {
+      background: transparent;
+      border: 2px solid #54ffd0;
+      padding: 10px 26px;
+      font-size: 16px;
+      color: #54ffd0;
+      border-radius: 999px;
+      cursor: pointer;
+      margin: 8px;
+      transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+    }
+
+    .btn:hover {
+      background: #54ffd0;
+      color: #050505;
+      transform: translateY(-1px);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    #result {
+      max-width: 900px;
+      margin: 32px auto 0;
+      text-align: left;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    #result ul {
+      padding-left: 20px;
+    }
+
+    #result li {
+      margin-bottom: 4px;
+    }
+
+    .badge-container {
+      margin-top: 16px;
+      margin-bottom: 8px;
+    }
+
+    .badge-pill {
+      padding: 8px 20px;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 15px;
+      display: inline-block;
+    }
+
+    .badge-good {
+      background: #1f8a70;
+      color: #ffffff;
+    }
+
+    .badge-normal {
+      background: #b38f1b;
+      color: #000000;
+    }
+
+    .badge-high {
+      background: #b3261e;
+      color: #ffffff;
+    }
+
+    .note {
+      margin-top: 20px;
+      font-size: 12px;
+      color: #b0b0b0;
+      text-align: left;
+    }
+
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 32px;
+      }
+      #boards {
+        flex-direction: column;
+        align-items: center;
+      }
+      .board {
+        gap: 16px;
+      }
+      .peg {
+        width: 64px;
+        height: 200px;
+      }
+      .ball {
+        width: 46px;
+        height: 46px;
+      }
+      #result {
+        font-size: 15px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Tower of London</h1>
+
+  <div id="status">Premi "Inizia il test" per cominciare la serie di puzzle.</div>
+
+  <div>
+    <button id="startBtn" class="btn">Inizia il test</button>
+    <button id="restartBtn" class="btn">Reset</button>
+  </div>
+
+  <div id="boards-wrapper">
+    <div id="boards">
+      <div class="board-block">
+        <div class="board-title">Stato iniziale</div>
+        <div id="startBoard" class="board"></div>
+      </div>
+
+      <div class="board-block">
+        <div class="board-title">Obiettivo</div>
+        <div id="targetBoard" class="board"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="result"></div>
+
+  <script>
+    /* --------------------------------
+       CONFIGURAZIONE
+    -------------------------------- */
+
+    // URL della tua Web App Google Apps Script
+    const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzrxhr475zgOM9Kbom2l3SwQXhla1wpKZvg2fJnrInpVg_pb6MFNglt84lTBwyyfWd1/exec";
+
+    // tre pioli. max 3 sfere per piolo
+    // 1 = rossa . 2 = verde . 3 = blu
+    const PROBLEMS = [
+      {
+        id: "TOL-01",
+        start: [
+          [1, 2],
+          [3],
+          []
+        ],
+        target: [
+          [1],
+          [2],
+          [3]
+        ],
+        minMoves: 4,
+        maxMoves: 8
+      },
+      {
+        id: "TOL-02",
+        start: [
+          [2],
+          [1, 3],
+          []
+        ],
+        target: [
+          [1, 2],
+          [3],
+          []
+        ],
+        minMoves: 4,
+        maxMoves: 9
+      },
+      {
+        id: "TOL-03",
+        start: [
+          [3],
+          [1, 2],
+          []
+        ],
+        target: [
+          [1],
+          [2],
+          [3]
+        ],
+        minMoves: 5,
+        maxMoves: 10
+      },
+      {
+        id: "TOL-04",
+        start: [
+          [1, 2, 3],
+          [],
+          []
+        ],
+        target: [
+          [],
+          [1, 2, 3],
+          []
+        ],
+        minMoves: 7,
+        maxMoves: 14
+      }
+    ];
+
+    // tempo di pianificazione obbligatorio in millisecondi
+    const PLANNING_MS = 8000;
+    const MAX_HEIGHT = 3;
+
+    /* --------------------------------
+       STATO
+    -------------------------------- */
+
+    let currentState = [];
+    let targetState = [];
+    let selectedPeg = null;
+
+    let currentProblemIndex = 0;
+    let moveCount = 0;
+
+    const isMobile = /Mobi|Android|iPhone|iPad|Tablet/i.test(navigator.userAgent);
+    const deviceType = isMobile ? "mobile" : "desktop";
+
+    let sessionId = null;
+    let sessionTimestamp = null;
+
+    let planningStartTime = 0;
+    let executionStartTime = 0;
+
+    let planningTimer = null;
+
+    let testRunning = false;
+    let planningPhase = false;
+    let results = [];
+
+    /* --------------------------------
+       UTILITY
+    -------------------------------- */
+
+    function cloneState(state) {
+      return state.map(peg => peg.slice());
+    }
+
+    function ballClass(id) {
+      if (id === 1) return "ball ball-red";
+      if (id === 2) return "ball ball-green";
+      if (id === 3) return "ball ball-blue";
+      return "ball";
+    }
+
+    function renderBoard(containerId, state, clickable) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = "";
+
+      state.forEach((peg, index) => {
+        const pegDiv = document.createElement("div");
+        pegDiv.className = "peg";
+        pegDiv.dataset.index = index;
+
+        if (clickable) {
+          pegDiv.addEventListener("click", () => onPegClick(index));
+        }
+
+        peg.forEach(ball => {
+          const ballDiv = document.createElement("div");
+          ballDiv.className = ballClass(ball);
+          pegDiv.appendChild(ballDiv);
+        });
+
+        container.appendChild(pegDiv);
+      });
+
+      highlightSelectedPeg();
+    }
+
+    function highlightSelectedPeg() {
+      const startBoard = document.getElementById("startBoard");
+      const pegDivs = startBoard.getElementsByClassName("peg");
+
+      Array.from(pegDivs).forEach((pegDiv, index) => {
+        if (selectedPeg === index) {
+          pegDiv.classList.add("selected");
+        } else {
+          pegDiv.classList.remove("selected");
+        }
+      });
+    }
+
+    function statesEqual(a, b) {
+      if (a.length !== b.length) return false;
+      for (let i = 0; i < a.length; i++) {
+        if (a[i].length !== b[i].length) return false;
+        for (let j = 0; j < a[i].length; j++) {
+          if (a[i][j] !== b[i][j]) return false;
+        }
+      }
+      return true;
+    }
+
+    function interpretTOL(efficiencyPercent) {
+      if (efficiencyPercent >= 80) {
+        return {
+          label: "Ottima capacità di pianificazione con uso efficiente delle mosse",
+          cssClass: "badge-good"
+        };
+      } else if (efficiencyPercent >= 50) {
+        return {
+          label: "Pianificazione nella norma. possibili correzioni in corso d'opera",
+          cssClass: "badge-normal"
+        };
+      } else {
+        return {
+          label: "In questo test emergono tentativi poco pianificati o esplorativi",
+          cssClass: "badge-high"
+        };
+      }
+    }
+
+    function stopTimers() {
+      if (planningTimer) {
+        clearInterval(planningTimer);
+        planningTimer = null;
+      }
+    }
+
+    /* --------------------------------
+       GESTIONE PROBLEMI
+    -------------------------------- */
+
+    function resetAll() {
+      results = [];
+      currentProblemIndex = 0;
+      sessionId = null;
+      sessionTimestamp = null;
+      stopTimers();
+
+      document.getElementById("result").innerHTML = "";
+      document.getElementById("status").innerText =
+        'Premi "Inizia il test" per cominciare la serie di puzzle.';
+
+      loadCurrentProblem(false);
+    }
+
+    function loadCurrentProblem(enablePlanningCountdown) {
+      const problem = PROBLEMS[currentProblemIndex];
+      currentState = cloneState(problem.start);
+      targetState = cloneState(problem.target);
+      selectedPeg = null;
+      moveCount = 0;
+      testRunning = false;
+      planningPhase = enablePlanningCountdown;
+
+      renderBoard("startBoard", currentState, true);
+      renderBoard("targetBoard", targetState, false);
+
+      if (enablePlanningCountdown) {
+        startPlanningCountdown();
+      } else {
+        document.getElementById("status").innerText =
+          `Puzzle ${currentProblemIndex + 1} di ${PROBLEMS.length}. pronto per iniziare.`;
+      }
+    }
+
+    function startPlanningCountdown() {
+      const problem = PROBLEMS[currentProblemIndex];
+      planningPhase = true;
+      testRunning = false;
+      planningStartTime = performance.now();
+
+      const statusEl = document.getElementById("status");
+      let remaining = PLANNING_MS / 1000;
+
+      statusEl.innerText =
+        `Puzzle ${currentProblemIndex + 1} di ${PROBLEMS.length}. fase di pianificazione. ${remaining} secondi.`;
+
+      planningTimer = setInterval(() => {
+        remaining -= 1;
+        if (remaining > 0) {
+          statusEl.innerText =
+            `Puzzle ${currentProblemIndex + 1} di ${PROBLEMS.length}. fase di pianificazione. ${remaining} secondi.`;
+        } else {
+          stopTimers();
+          startExecution(problem);
+        }
+      }, 1000);
+    }
+
+    function startExecution(problem) {
+      planningPhase = false;
+      testRunning = true;
+      executionStartTime = performance.now();
+
+      document.getElementById("status").innerText =
+        `Puzzle ${currentProblemIndex + 1}. minimo teorico. ${problem.minMoves} mosse. inizia quando vuoi.`;
+    }
+
+    /* --------------------------------
+       INTERAZIONE UTENTE
+    -------------------------------- */
+
+    function onPegClick(index) {
+      if (!testRunning) return;
+
+      if (selectedPeg === null) {
+        if (currentState[index].length === 0) return;
+        selectedPeg = index;
+        highlightSelectedPeg();
+      } else {
+        if (selectedPeg === index) {
+          selectedPeg = null;
+          highlightSelectedPeg();
+          return;
+        }
+        moveBall(selectedPeg, index);
+        selectedPeg = null;
+        highlightSelectedPeg();
+      }
+    }
+
+    function moveBall(fromPeg, toPeg) {
+      if (currentState[fromPeg].length === 0) return;
+      if (currentState[toPeg].length >= MAX_HEIGHT) return;
+
+      const ball = currentState[fromPeg].pop();
+      currentState[toPeg].push(ball);
+      moveCount++;
+
+      renderBoard("startBoard", currentState, true);
+
+      const problem = PROBLEMS[currentProblemIndex];
+
+      if (moveCount > problem.maxMoves) {
+        finishCurrentProblem(false, true);
+        return;
+      }
+
+      if (statesEqual(currentState, targetState)) {
+        finishCurrentProblem(true, false);
+      } else {
+        document.getElementById("status").innerText =
+          `Puzzle ${currentProblemIndex + 1}. mosse. ${moveCount}. minimo teorico. ${problem.minMoves}.`;
+      }
+    }
+
+    /* --------------------------------
+       FINE DI UN PROBLEMA
+    -------------------------------- */
+
+    function finishCurrentProblem(solved, exceededMaxMoves) {
+      testRunning = false;
+      planningPhase = false;
+      stopTimers();
+
+      const problem = PROBLEMS[currentProblemIndex];
+
+      const now = performance.now();
+      const planningTimeMs =
+        planningStartTime ? Math.round(executionStartTime - planningStartTime) : 0;
+      const executionTimeMs = Math.round(now - executionStartTime);
+      const totalTimeMs = planningTimeMs + executionTimeMs;
+
+      let efficiencyPercent = 0;
+      if (solved && moveCount > 0) {
+        efficiencyPercent = Math.round((problem.minMoves / moveCount) * 100);
+        if (efficiencyPercent > 100) efficiencyPercent = 100;
+      }
+
+      const row = {
+        sessionId,
+        problemId: problem.id,
+        problemIndex: currentProblemIndex + 1,
+        minMoves: problem.minMoves,
+        maxMoves: problem.maxMoves,
+        movesUsed: moveCount,
+        solved,
+        exceededMaxMoves,
+        efficiencyPercent,
+        planningTimeMs,
+        executionTimeMs,
+        totalTimeMs
+      };
+
+      results.push(row);
+      sendResultRow(row);
+
+      let msg;
+      if (!solved && exceededMaxMoves) {
+        msg = `Puzzle ${currentProblemIndex + 1}. interrotto. limite di ${problem.maxMoves} mosse.`;
+      } else if (!solved) {
+        msg = `Puzzle ${currentProblemIndex + 1}. interrotto. configurazione non raggiunta.`;
+      } else {
+        msg = `Puzzle ${currentProblemIndex + 1} risolto in ${moveCount} mosse. minimo teorico. ${problem.minMoves}.`;
+      }
+      document.getElementById("status").innerText = msg;
+
+      if (currentProblemIndex < PROBLEMS.length - 1) {
+        currentProblemIndex++;
+        setTimeout(() => {
+          loadCurrentProblem(true);
+        }, 1500);
+      } else {
+        showSessionSummary();
+      }
+    }
+
+    /* --------------------------------
+       RIEPILOGO SESSIONE
+    -------------------------------- */
+
+    function showSessionSummary() {
+      if (!results.length) return;
+
+      let solvedCount = 0;
+      let effSum = 0;
+      let effCount = 0;
+
+      results.forEach(r => {
+        if (r.solved) solvedCount++;
+        if (r.efficiencyPercent > 0) {
+          effSum += r.efficiencyPercent;
+          effCount++;
+        }
+      });
+
+      const meanEff = effCount ? Math.round(effSum / effCount) : 0;
+      const interpretation = interpretTOL(meanEff);
+
+      const resultDiv = document.getElementById("result");
+
+      const listItems = results
+        .map(
+          r =>
+            `<li>Puzzle ${r.problemIndex} (${r.problemId}). mosse ${r.movesUsed}, minimo ${r.minMoves}, efficienza ${r.efficiencyPercent} percent.</li>`
+        )
+        .join("");
+
+      resultDiv.innerHTML = `
+        <h2>Risultati Tower of London</h2>
+
+        <p><strong>Puzzle completati. </strong>${results.length}</p>
+        <p><strong>Puzzle risolti. </strong>${solvedCount}</p>
+        <p><strong>Efficienza media. </strong>${meanEff} percent</p>
+
+        <div class="badge-container">
+          <div class="badge-pill ${interpretation.cssClass}">
+            ${interpretation.label}
+          </div>
+        </div>
+
+        <h3>Dettaglio</h3>
+        <ul>${listItems}</ul>
+
+        <p class="note">
+          I dati di questo test sono salvati in forma anonima e aggregata.  
+          non raccogliamo nome, email o altri dati che permettano l'identificazione personale.  
+          la tua sessione è identificata dal codice <strong>${sessionId}</strong>.
+        </p>
+      `;
+    }
+
+    /* --------------------------------
+       INVIO A GOOGLE SHEET
+    -------------------------------- */
+
+    function sendResultRow(row) {
+      const payload = {
+        timestamp: sessionTimestamp,
+        session_id: sessionId,
+        device_type: deviceType,
+        problem_id: row.problemId,
+        problem_index: row.problemIndex,
+        min_moves: row.minMoves,
+        max_moves: row.maxMoves,
+        moves_used: row.movesUsed,
+        moves_over_min: Math.max(0, row.movesUsed - row.minMoves),
+        solved: row.solved,
+        exceeded_max_moves: row.exceededMaxMoves,
+        efficiency_percent: row.efficiencyPercent,
+        planning_time_ms: row.planningTimeMs,
+        execution_time_ms: row.executionTimeMs,
+        total_time_ms: row.totalTimeMs
+      };
+
+      fetch(WEBAPP_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify(payload)
+      }).catch(err => {
+        console.error("Errore invio Tower of London:", err);
+      });
+    }
+
+    /* --------------------------------
+       BOTTONI
+    -------------------------------- */
+
+    document.getElementById("restartBtn").onclick = resetAll;
+
+    document.getElementById("startBtn").onclick = () => {
+      resetAll();
+      sessionId = "AEX-" + Date.now();
+      sessionTimestamp = new Date().toISOString();
+      loadCurrentProblem(true);
+    };
+
+    // inizializzazione
+    resetAll();
+  </script>
+</body>
+</html>
